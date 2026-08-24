@@ -8,10 +8,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Show environment
+      - name: Select Xcode with Swift 6.3.2 (matches libminipng)
         run: |
-          xcodebuild -version
-          xcodebuild -showsdks | grep -i macosx || true
+          for x in /Applications/Xcode*.app; do
+            sv=$(DEVELOPER_DIR="$x" xcrun swift --version 2>/dev/null | head -1)
+            echo "$x => $sv"
+            if echo "$sv" | grep -q "6.3.2"; then
+              echo "匹配: $x"
+              sudo xcode-select -s "$x"
+              xcodebuild -version
+              echo "SELECTED=1" >> "$GITHUB_ENV"
+            fi
+          done
+          if [ "${SELECTED:-0}" != "1" ]; then
+            echo "::warning::未找到 Swift 6.3.2 的 Xcode，将用默认版本继续尝试"
+          fi
 
       - name: Resolve package dependencies
         run: |

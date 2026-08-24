@@ -1,0 +1,42 @@
+name: Build uPic
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show environment
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i macosx || true
+
+      - name: Resolve package dependencies
+        run: |
+          xcodebuild -resolvePackageDependencies -project uPic.xcodeproj -scheme "uPic(Release)" || true
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild -project uPic.xcodeproj \
+            -scheme "uPic(Release)" \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build 2>&1 | tail -80
+
+      - name: Package
+        run: |
+          cd build/Build/Products/Release
+          zip -qry "$GITHUB_WORKSPACE/uPic-1.4.9-unsigned.zip" uPic.app
+          ls -lh "$GITHUB_WORKSPACE/uPic-1.4.9-unsigned.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uPic-1.4.9-unsigned
+          path: uPic-1.4.9-unsigned.zip
+          retention-days: 7
